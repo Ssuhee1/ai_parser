@@ -1,11 +1,11 @@
 # Welcome to PDF and HTML file parser
 
-Project name : Ai law parser project
-Founder : Shuree 
-Worker : USPM [buya.psh@gmail.com]
-Code writer : B.Sukhbat [1998bsuhe@gmail.com]
-Used language : Linux bash script
-Date : 2021/12/26
+Project name : Ai law parser project  
+Founder : Shuree  
+Worker : USPM [buya.psh@gmail.com]  
+Code writer : B.Sukhbat [1998bsuhe@gmail.com]  
+Used language : Linux bash script  
+Date : 2021/12/26  
 
 ## Introduction
 This code can parse pdf and html file by specified rule
