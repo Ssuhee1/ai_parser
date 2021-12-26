@@ -14,18 +14,26 @@ This code can parse pdf and html file by specified rule
 
 
 ## Dependecies
-1) pdftotext \n
+1) pdftotext
+```
 sudo apt install pdftotext
+```
 
-2) html2text \n
+2) html2text
+```
 sudo apt install html2text
+```
 
 ## How to run 
 1) Put your file into uploads directory
 2) Put ./parser shell in same directory with uploads
 3) Change parser shell mode 
+```
     chmod +x parser
+```
 4) Run following script 
+```
     ./parser '<filename>' '<parse rule>'
+```
     
 
