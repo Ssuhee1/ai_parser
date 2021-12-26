@@ -1,6 +1,13 @@
 #!/bin/bash 
 
-## Setup up useful file and global variable 
+##### Information 
+# Project name : Ai shuree
+# Founder : Shuree  
+# Worker : USPM [buya.psh@gmail.com]  
+# Code writer : B.Sukhbat [1998bsuhe@gmail.com]  
+# Used language : Linux bash script  
+
+##### Setup up useful file and global variable 
 # temp file 
 tmp=/tmp/tmp_file_$$
 # first level file name sort index
@@ -12,10 +19,10 @@ parser=$(cd $(dirname $0); pwd)
 # input file stored directory
 uploads=$parser/uploads
 
-## Setup useful functions
+##### Setup useful functions
 source './functions'
 
-## Check input file is html or pdf 
+##### Check input file is html or pdf 
 if [ $(echo $1 | awk -F '.' '{print $NF}') != 'pdf' ] ;then 
 	echo html file 
 else 
@@ -39,13 +46,13 @@ else
     mv ${tmp}_cleaned_data-temp ${tmp}_cleaned_data
 fi
 
-## Make directory, store text file 
+##### Make directory, store text file 
 # make directory
 mkdir $parser/result-0
 # Copy cleaned data to tmp directory 
 cp ${tmp}_cleaned_data $parser/result-0
 
-## Loop by parsing level 
+##### Loop by parsing level 
 # Setup level count 
 count=0
 for main_word in $(echo $2)
@@ -63,48 +70,26 @@ do
         # Loop by file 
         for file in $(echo $files)
         do 
-            # Create directory 
-            mkdir -p $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')
+            # Create directory for store this level result
+            createDirectory "$count" "$file"
             # Search part
-            cat $file | grep -n ''$(seach_word_abc $(echo $word | sed 's/@/ /g'))'' | sed 's/ /_/g' | awk -F ':' '{print $2,$1,$1-1}' > ${tmp}-combination-data-v1
-            
-            if [[ $count == 0 ]];then 
-                lineIdIndex=1
-                while read -r lineI
-                do 
-                    echo $(awk '{print $'$lineIdIndex'}' /tmp/lineindex)'<sep_index>'$lineI
-                    lineIdIndex=$(($lineIdIndex + 1))
-                done < ${tmp}-combination-data-v1 > ${tmp}-combination-data-v2
-            else 
-                cat ${tmp}-combination-data-v1 > ${tmp}-combination-data-v2
-            fi 
-
-            cat ${tmp}-combination-data-v2 | awk '{print $1,$2}' > ${tmp}-combination-one
-
-
-            cat ${tmp}-combination-data-v2 | awk '{print $3}' | tail -n +2  > ${tmp}-combination-two
-            cat $file | awk 'END{print NR}' >> ${tmp}-combination-two
-
-            combine2file "${tmp}-combination-one" "${tmp}-combination-two" > ${tmp}-combination-final
-
-            # pr -m -t ${tmp}-combination-one ${tmp}-combination-two > ${tmp}-combination-final
-
-            # Divide part 
-            while read -r divide_i
-            do 
-                # echo $divide_i
-                file_name=$(echo $divide_i | awk '{print $1}')
-                range_1=$(echo $divide_i | awk '{print $2}')
-                range_2=$(echo $divide_i | awk '{print $3}')
-                sed -n "$range_1,${range_2}p" $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/$file_name 
-            done < ${tmp}-combination-final
+            cat $file | 
+            grep -n ''$(seach_word_abc $(echo $word | sed 's/@/ /g'))'' | 
+            sed 's/ /_/g' | 
+            awk -F ':' '{print $2,$1,$1-1}' > ${tmp}-search-result-v1
+            # Check first level or not
+            setupFilenameIndex "$count" "${tmp}-search-result-v1" > ${tmp}-search-result-v2
+            # Prepare search result
+            prepareSearchResult "${tmp}-search-result-v2" "$file" > ${tmp}-search-result-v3
+            # Divide file by search result
+            divideFile "${tmp}-search-result-v3"
         done
     elif [ $levelType == 'abc' ];then 
         # Loop by all files
         for file in $(echo $files)
         do
-            # Create directory for store result
-            mkdir -p $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')
+            # Create directory for store this level result
+            createDirectory "$count" "$file"
             # User input abc
             echo "$word" | 
             awk -F "@" '{print $1}' > ${tmp}-user-input-abc
@@ -131,29 +116,14 @@ do
                 cat $file |
                 grep -n '^'$search_abc'\| '$search_abc' ' |
                 awk -F ':' '{print "'$changer_search_abc'",$1,$1-1 }' > ${tmp}-result-line-number
-                # Setup first stop case variable 
+                # Setup loop stop case variable 
                 result=$(awk 'END{print NR}' < ${tmp}-result-line-number)
-                # Check first stop 
+                # Check loop stop 
                 if [[ $result == 0 ]];then 
-                    # Filename (1st column) and start line number (2nd column) is ok 
-                    cat ${tmp}-result-line-numbers | awk '{print $1,$2}' > ${tmp}-result-line-numbers-col_1_2
-                    # End line number is 1 row behind => Preparing end line number
-                    cat ${tmp}-result-line-numbers | awk '{print $3}' | tail -n +2 > ${tmp}-result-line-numbers-col_3
-                    cat $file | awk 'END{print NR}' >> ${tmp}-result-line-numbers-col_3
-                    # Combine prepared two data
-                    combine2data "${tmp}-result-line-numbers-col_1_2" "${tmp}-result-line-numbers-col_3" > ${tmp}-result-line-numbers-final
-                    # Divide file
-                    while read -r line 
-                    do 
-                        # Make directory 
-                        mkdir -p ./this_is_test_of_abc
-                        # Setup newly create file name and line indexs
-                        filename=$(echo $line | awk '{print $1}')
-                        line_start_index=$(echo $line | awk '{print $2}')
-                        line_end_index=$(echo $line | awk '{print $3}')
-                        cat $file | 
-                        sed -n "$line_start_index,${line_end_index}p" > ./this_is_test_of_abc/$filename
-                    done < ${tmp}-result-line-numbers-final
+                    # Prepare search result
+                    prepareSearchResult "${tmp}-result-line-numbers" "$file" > ${tmp}-result-line-numbers-final
+                    # Divide file by search result
+                    divideFile "${tmp}-result-line-numbers-final"
                     break
                 else 
                     cat ${tmp}-result-line-number >> ${tmp}-result-line-numbers
@@ -166,41 +136,39 @@ do
         search_roman_number=1
         for file in $(echo $files)
         do
-            mkdir -p $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')
+            # Create directory for store this level result
+            createDirectory "$count" "$file"
+            # Search roman number from file and 
+            #   if result is founded search next roman number 
+            #   or result is not founded stop searching
             while true 
             do
-                cat $file | grep -nx ''$(echo $word | sed 's/@/ /g' | awk '{print $1}')" "$(int2roman $search_roman_number)'\|'$(echo $word | sed 's/@/ /g' | awk '{print $1}')" "$(int2roman $search_roman_number)"[A..Z]"' \|^\['$(echo $word | sed 's/@/ /g' | awk '{print $1}')" "$(int2roman $search_roman_number)"[A..Z]"'' | sed 's/ /_/g' > ${tmp}-roman-search-result 
-
-                result=$(cat ${tmp}-roman-search-result | awk 'END {print NR}')
-
+                # Search part
+                cat $file | 
+                grep -nx ''$(echo $word | sed 's/@/ /g' | awk '{print $1}')" "$(int2roman $search_roman_number)'\|'$(echo $word | 
+                sed 's/@/ /g' | 
+                awk '{print $1}')" "$(int2roman $search_roman_number)"[A..Z]"' \|^\['$(echo $word | sed 's/@/ /g' | 
+                awk '{print $1}')" "$(int2roman $search_roman_number)"[A..Z]"'' | 
+                sed 's/ /_/g' > ${tmp}-search-result-v1 
+                # Setup loop stop case variable 
+                result=$(cat ${tmp}-search-result-v1 | awk 'END {print NR}')
+                # Check loop stop
                 if [[ $result == 0 ]];then 
-                    cat ${tmp}-roman-search-result-collect | awk -F ':' '{print $NF,$1,$1-1}' > ${tmp}-combined-data
-
-                    lineIdIndex=1
-                    while read -r lineI
-                    do 
-                        echo $(awk '{print $'$lineIdIndex'}' /tmp/lineindex)'<sep_index>'$lineI
-                        lineIdIndex=$(($lineIdIndex + 1))
-                    done < ${tmp}-combined-data > ${tmp}-combination-data-v2
-
-                    cat ${tmp}-combination-data-v2 | awk '{print $1,$2}' > ${tmp}-combined-one
-                    cat ${tmp}-combination-data-v2 | awk '{print $3}' | tail -n +2 > ${tmp}-combined-two
-                    cat $file | awk 'END{print NR}' >> ${tmp}-combined-two
-                    pr -m -t ${tmp}-combined-one ${tmp}-combined-two > ${tmp}-combined-data-final 
-                    while read -r divide_j 
-                    do        
-                        file_name=""; range_1="";range_2=""
-                        file_name=$(awk '{print $1}' <<< $divide_j)
-                        range_1=$(awk '{print $2}' <<< $divide_j)
-                        range_2=$(awk '{print $3}' <<< $divide_j)
-                        sed -n "$range_1,${range_2}p" $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/$file_name 
-                    done <  ${tmp}-combined-data-final         
-                    rm -rf ${tmp}-collected-result 
+                    cat ${tmp}-search-result-v1-collect | awk -F ':' '{print $NF,$1,$1-1}' > ${tmp}-search-result-v2
+                    # Check first level or not
+                    setupFilenameIndex "$count" "${tmp}-search-result-v2" > ${tmp}-search-result-v3
+                    # Prepare search result
+                    prepareSearchResult "${tmp}-search-result-v3" "$file" > ${tmp}-search-result-v4 
+                    # Divide file by search result
+                    divideFile "${tmp}-search-result-v4"
+                    # Remove first search result 
+                    rm -rf ${tmp}-search-result-v1-collect 
                     break
                 else 
-                    cat ${tmp}-roman-search-result >> ${tmp}-roman-search-result-collect
+                    # Collect search result
+                    cat ${tmp}-search-result-v1 >> ${tmp}-search-result-v1-collect
                 fi 
-
+                # increase roman number
                 search_roman_number=$(($search_roman_number + 1))
             done 
         done 
@@ -208,103 +176,90 @@ do
         sed_number=1
         for file in $(echo $files)
         do
-            # Create directory 
-            mkdir -p $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')
-
-            # Search part
-            search_position=$(echo $word | awk -F '@' '{print $3}')
+            # Create directory for store this level result
+            createDirectory "$count" "$file"
+            # Search roman number from file and 
+            #   if result is founded search next roman number 
+            #   or result is not founded stop searching
             while true 
             do
-                # ''$(seach_word_abc $(echo $word | sed 's/@/ /g'))''
+                # Search part 
+                # setup search word
                 search_number=$(echo $word | awk -F '@' '{print $1}' | sed 's/1/'$sed_number'/g')
-                cat $file | grep -n '^'$sed_number'\.\|^'$sed_number'.\.\| '$sed_number'\. \| '$sed_number'.\. ' > ${tmp}-search-result
-                result=$(cat ${tmp}-search-result | awk 'END{print NR}')
+                # search word
+                cat $file | grep -n '^'$sed_number'\.\|^'$sed_number'.\.\| '$sed_number'\. \| '$sed_number'.\. ' > ${tmp}-search-result-v1
+                # Setup loop stop case variable 
+                result=$(cat ${tmp}-search-result-v1 | awk 'END{print NR}')
+                # Check loop stop
                 if [ $result == 0 ];then
-                    cat ${tmp}-collected-result | awk -F ':' '{print $NF,$1,$1-1}' > ${tmp}-combined-data
-                    cat ${tmp}-combined-data | awk '{print $1,$2}' > ${tmp}-combined-one
-                    cat ${tmp}-combined-data | awk '{print $3}' | tail -n +2 > ${tmp}-combined-two
-                    cat $file | awk 'END{print NR}' >> ${tmp}-combined-two
-                    pr -m -t ${tmp}-combined-one ${tmp}-combined-two > ${tmp}-combined-data-final 
-                    while read -r divide_j 
-                    do        
-                        file_name=""; range_1="";range_2=""
-                        file_name=$(awk '{print $1}' <<< $divide_j)
-                        range_1=$(awk '{print $2}' <<< $divide_j)
-                        range_2=$(awk '{print $3}' <<< $divide_j)
-                        sed -n "$range_1,${range_2}p" $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/$file_name 
-                    done <  ${tmp}-combined-data-final         
-                   rm -rf ${tmp}-collected-result 
+                    cat ${tmp}-search-result-v1-collect | awk -F ':' '{print $NF,$1,$1-1}' > ${tmp}-search-result-v2
+                    # Check first level or not
+                    setupFilenameIndex "$count" "${tmp}-search-result-v2" > ${tmp}-search-result-v3
+                    # Prepare search result
+                    prepareSearchResult "${tmp}-search-result-v3" "$file" > ${tmp}-search-result-v4 
+                    # Divide file by search result
+                    divideFile "${tmp}-search-result-v4"
+                    # Remove first search result 
+                    rm -rf ${tmp}-search-result-v1-collect 
                     break
                 else 
-                    cat ${tmp}-search-result | awk '{print $0,":'$sed_number'"}' >> ${tmp}-collected-result 
+                    # Collect search result
+                    cat ${tmp}-search-result-v1 | awk '{print $0,":'$sed_number'"}' >> ${tmp}-search-result-v1-collect 
                 fi 
+                # increase range number
                 sed_number=$(($sed_number + 1))
             done 
-
-            # Divide part 
-
         done 
     elif [ $levelType == 'sub' ];then 
         for file in $(echo $files)
         do
-            # Create directory 
-            mkdir -p $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')
-
-            # Search part
+            # Create directory for store this level result
+            createDirectory "$count" "$file"
+            # Setup every file sub number
             sed_number=1
             while true 
             do 
+                # Search part 
                 search_number=$(echo $word | awk -F "@" '{print $1}' | sed 's/1/'${sed_number}'/g' )
                 cat $file | 
-                grep -n '^'$search_number'\| '$search_number' ' | head -1 > ${tmp}-temp-each-data 
-                result=$(cat ${tmp}-temp-each-data  | awk 'END{print NR}')
+                grep -n '^'$search_number'\| '$search_number' ' | head -1 > ${tmp}-search-result-v1 
+                result=$(cat ${tmp}-search-result-v1  | awk 'END{print NR}')
                 if [ $result -eq 0 ];then 
-                    # echo $file huwaagdah
-
-                    if [[ -s ${tmp}-collection-data ]];then 
-                        cat ${tmp}-collection-data | awk -F ':' '{print $NF,$1,$1-1}' > ${tmp}-combination-data
-                        cat ${tmp}-combination-data | awk '{print $1,$2}' > ${tmp}-combination-data-one
-                        cat ${tmp}-combination-data | awk '{print $3}' | tail -n +2 > ${tmp}-combination-data-two
-                        cat $file | awk 'END{print NR}' >> ${tmp}-combination-data-two
-                        pr -m -t ${tmp}-combination-data-one ${tmp}-combination-data-two > ${tmp}-combination-data-final 
-
-                        
-                        while read -r divide_k 
-                        do 
-                            file_name=""; range_1="";range_2=""
-                            file_name=$(awk '{print $1}' <<< $divide_k)
-                            range_1=$(awk '{print $2}' <<< $divide_k)
-                            range_2=$(awk '{print $3}' <<< $divide_k)
-                            sed -n "$range_1,${range_2}p" $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/$file_name 
-                        done < ${tmp}-combination-data-final 
-
+                    # Check divide result or copy result
+                    if [[ -s ${tmp}-search-result-v1-collect ]];then
+                        cat ${tmp}-search-result-v1-collect | awk -F ':' '{print $NF,$1,$1-1}' > ${tmp}-search-result-v2
+                        # Prepare search result
+                        prepareSearchResult "${tmp}-search-result-v2" "$file" > ${tmp}-search-result-v3 
+                        # Divide file by search result
+                        divideFile "${tmp}-search-result-v3"
                     else 
+                        # Directly copy result file
                         cat $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/"@@@" 
                     fi 
-                    rm -rf ${tmp}-collection-data
+                    rm -rf ${tmp}-search-result-v1-collect
                     break 
                 else 
-                    cat ${tmp}-temp-each-data | awk '{print $0":'$sed_number'"}' >> ${tmp}-collection-data
+                    # Collect search result
+                    cat ${tmp}-search-result-v1 | awk '{print $0":'$sed_number'"}' >> ${tmp}-search-result-v1-collect
                 fi 
-
+                # increase sub number
                 sed_number=$(($sed_number + 1))
             done  
-
-            # Divide part 
-
         done 
+    elif [ $levelType == 'lroman' ];then
+        # Write code here
     fi 
-    
+    # Increase level number
 	count=$(($count + 1))
 done 
 
-# To csv 
-
-
+##### Result convert to csv
 for csv_row in $(find $(echo $parser/result* | sed 's/ /\n/g' | tail -1) -type f | sort) ; do echo $(echo $csv_row | awk -F '/' '{$1="";$2="";print $0}' | awk -F '<sep_index>' '{print $2}' | sed 's/ /\",\"/g' | sed 's/^/\"/g' | sed 's/$/\"/g')',"'$(cat $csv_row)'"'  ;done > $parser/final-$$.csv
 
+##### Print result csv file name
 echo '{ "output": "final-'$$'.csv"}'
 
-# rm -rf $parser/result-{1,2,3}
+##### Clean temp file and directory
 rm -rf ${tmp}-*
+# Remove comment in production version !!!
 # rm -rf $parser/result-*
