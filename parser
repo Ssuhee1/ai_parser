@@ -1,16 +1,21 @@
 #!/bin/bash 
 
-# Setup up useful file and global variable 
+## Setup up useful file and global variable 
+# temp file 
 tmp=/tmp/tmp_file_$$
-echo {a..z}{a..z}{a..z} > /tmp/lineindex
-echo {a..z} > /tmp/abcindex
-parser=./
+# first level file name sort index
+echo {a..z}{a..z}{a..z} > /tmp/lineindex 
+# level abc parser user 26 alphabet
+echo {a..z} > /tmp/abcindex 
+# current directory
+parser=$(cd $(dirname $0); pwd) 
+# input file stored directory
 uploads=$parser/uploads
 
-# Setup useful functions
+## Setup useful functions
 source './functions'
 
-# Check input file is html or pdf 
+## Check input file is html or pdf 
 if [ $(echo $1 | awk -F '.' '{print $NF}') != 'pdf' ] ;then 
 	echo html file 
 else 
@@ -34,13 +39,13 @@ else
     mv ${tmp}_cleaned_data-temp ${tmp}_cleaned_data
 fi
 
-# Make directory pdf to text file store  
+## Make directory, store text file 
+# make directory
 mkdir $parser/result-0
-
 # Copy cleaned data to tmp directory 
 cp ${tmp}_cleaned_data $parser/result-0
 
-# Loop by parsing level 
+## Loop by parsing level 
 # Setup level count 
 count=0
 for main_word in $(echo $2)
@@ -53,20 +58,15 @@ do
     levelType=$(echo $main_word | awk -F "@" '{print $NF}')  
     # Store level key word into word variable 
     word=$(echo $main_word | awk -F '@' '{$NF="";print}' | sed 's/ /@/g')
-    # Result temp directory name store into result_filename variable 
-    result_filename="$parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')"
     # Check level type 
     if [ $levelType == 'ug' ];then 
         # Loop by file 
         for file in $(echo $files)
         do 
-            # Create directory
-            mkdir -p $result_filename
+            # Create directory 
+            mkdir -p $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')
             # Search part
-            cat $file |
-            grep -n ''$(seach_word_abc $(echo $word | sed 's/@/ /g'))'' | 
-            sed 's/ /_/g' | 
-            awk -F ':' '{print $2,$1,$1-1}' > ${tmp}-combination-data-v1
+            cat $file | grep -n ''$(seach_word_abc $(echo $word | sed 's/@/ /g'))'' | sed 's/ /_/g' | awk -F ':' '{print $2,$1,$1-1}' > ${tmp}-combination-data-v1
             
             if [[ $count == 0 ]];then 
                 lineIdIndex=1
@@ -96,7 +96,7 @@ do
                 file_name=$(echo $divide_i | awk '{print $1}')
                 range_1=$(echo $divide_i | awk '{print $2}')
                 range_2=$(echo $divide_i | awk '{print $3}')
-                sed -n "$range_1,${range_2}p" $file > $result_filename/$file_name 
+                sed -n "$range_1,${range_2}p" $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/$file_name 
             done < ${tmp}-combination-final
         done
     elif [ $levelType == 'abc' ];then 
@@ -104,7 +104,7 @@ do
         for file in $(echo $files)
         do
             # Create directory for store result
-            mkdir -p $result_filename
+            mkdir -p $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')
             # User input abc
             echo "$word" | 
             awk -F "@" '{print $1}' > ${tmp}-user-input-abc
@@ -166,7 +166,7 @@ do
         search_roman_number=1
         for file in $(echo $files)
         do
-            mkdir -p $result_filename
+            mkdir -p $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')
             while true 
             do
                 cat $file | grep -nx ''$(echo $word | sed 's/@/ /g' | awk '{print $1}')" "$(int2roman $search_roman_number)'\|'$(echo $word | sed 's/@/ /g' | awk '{print $1}')" "$(int2roman $search_roman_number)"[A..Z]"' \|^\['$(echo $word | sed 's/@/ /g' | awk '{print $1}')" "$(int2roman $search_roman_number)"[A..Z]"'' | sed 's/ /_/g' > ${tmp}-roman-search-result 
@@ -193,7 +193,7 @@ do
                         file_name=$(awk '{print $1}' <<< $divide_j)
                         range_1=$(awk '{print $2}' <<< $divide_j)
                         range_2=$(awk '{print $3}' <<< $divide_j)
-                        sed -n "$range_1,${range_2}p" $file > $result_filename/$file_name 
+                        sed -n "$range_1,${range_2}p" $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/$file_name 
                     done <  ${tmp}-combined-data-final         
                     rm -rf ${tmp}-collected-result 
                     break
@@ -209,7 +209,7 @@ do
         for file in $(echo $files)
         do
             # Create directory 
-            mkdir -p $result_filename
+            mkdir -p $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')
 
             # Search part
             search_position=$(echo $word | awk -F '@' '{print $3}')
@@ -231,7 +231,7 @@ do
                         file_name=$(awk '{print $1}' <<< $divide_j)
                         range_1=$(awk '{print $2}' <<< $divide_j)
                         range_2=$(awk '{print $3}' <<< $divide_j)
-                        sed -n "$range_1,${range_2}p" $file > $result_filename/$file_name 
+                        sed -n "$range_1,${range_2}p" $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/$file_name 
                     done <  ${tmp}-combined-data-final         
                    rm -rf ${tmp}-collected-result 
                     break
@@ -248,7 +248,7 @@ do
         for file in $(echo $files)
         do
             # Create directory 
-            mkdir -p $result_filename
+            mkdir -p $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')
 
             # Search part
             sed_number=1
@@ -275,11 +275,11 @@ do
                             file_name=$(awk '{print $1}' <<< $divide_k)
                             range_1=$(awk '{print $2}' <<< $divide_k)
                             range_2=$(awk '{print $3}' <<< $divide_k)
-                            sed -n "$range_1,${range_2}p" $file > $result_filename/$file_name 
+                            sed -n "$range_1,${range_2}p" $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/$file_name 
                         done < ${tmp}-combination-data-final 
 
                     else 
-                        cat $file > $result_filename/"@@@" 
+                        cat $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/"@@@" 
                     fi 
                     rm -rf ${tmp}-collection-data
                     break 
