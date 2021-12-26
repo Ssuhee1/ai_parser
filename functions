@@ -213,3 +213,47 @@ function combine2file() {
         line_count=$(($line_count + 1))
     done < $file_1
 }
+
+# create each level result directory
+function createDirectory() {
+    mkdir -p $parser/result-$(($1 + 1))/$(echo $2 | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')
+}
+
+# Check level number is first or not 
+# If it is first level add index to filename
+function setupFilenameIndex() {
+    if [[ $1 == 0 ]];then 
+        local lineIdIndex=1
+        while read -r lineI
+        do 
+            echo $(awk '{print $'$lineIdIndex'}' /tmp/lineindex)'<sep_index>'$lineI
+            lineIdIndex=$(($lineIdIndex + 1))
+        done < $2
+        else 
+            cat $2
+    fi 
+}
+
+# Prepare search result for divide file 
+function prepareSearchResult() {
+    cat $1 | awk '{print $1,$2}' > ${tmp}-result-column-1-2
+    # Prepare third column (end line)
+    cat $1 | awk '{print $3}' | tail -n +2  > ${tmp}-result-column-3
+    cat $2 | awk 'END{print NR}' >> ${tmp}-result-column-3
+    combine2file "${tmp}-result-column-1-2" "${tmp}-result-column-3" 
+    rm -rf ${tmp}-result-column-1-2 ${tmp}-result-column-3
+}
+
+# File divide by search result 
+function divideFile() {
+    # read search result file line by line
+    while read -r divide_i
+    do 
+        # Store filename, start line and end line to variables
+        file_name=$(echo $divide_i | awk '{print $1}')
+        range_1=$(echo $divide_i | awk '{print $2}')
+        range_2=$(echo $divide_i | awk '{print $3}')
+        # Divide input file by search result file and write to new file
+        sed -n "$range_1,${range_2}p" $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/$file_name 
+    done < $1
+}
