@@ -15,7 +15,7 @@ echo {a..z}{a..z}{a..z} > /tmp/lineindex
 # level abc parser user 26 alphabet
 echo {a..z} > /tmp/abcindex 
 # current directory
-parser=$(cd $(dirname $0); pwd) 
+parser='./'
 # input file stored directory
 uploads=$parser/uploads
 
@@ -90,47 +90,48 @@ do
         do
             # Create directory for store this level result
             createDirectory "$count" "$file"
-            # User input abc
-            echo "$word" | 
-            awk -F "@" '{print $1}' > ${tmp}-user-input-abc
-            # Seperate bracket and alphabet
-            cat ${tmp}-user-input-abc | 
-            tr -d '()' > ${tmp}-end-abc
-            # Find abc index 
-            cat /tmp/abcindex | 
-            sed 's/ /\n/g' |
-            grep -n ''$(cat ${tmp}-end-abc)'' |
-            awk -F ":" '{print $1}' > ${tmp}-end-abc-index
-            # Setup alphabet index equal to 1. Searching start from a to user input alphabet
-            abc_index_number=1
-            # Loop : stop until search result in empty
+            # Search word index preparation
+                # store user input to user_input_search_word variable
+                user_input_search_word=$(echo $word | awk -F "@" '{print $1}')
+                # take alphabet from user input
+                alphabet=$(echo $user_input_search_word | awk '{abc=""; for(i=1;i<=length($0);i++){if(substr($0,i,1) ~ /[a-z]/){abc=abc""substr($0,i,1)}};print abc}')
+                # find user input alphabet index ==> I need 1 to this index loop
+                alphabet_index=$(cat /tmp/abcindex | sed 's/ /\n/g' | grep -n "$alphabet" | awk -F ":" '{print $1}')
+            # Setup every file abc number 
+            sed_number=1
             while true 
             do 
-                # Search alphabet
-                changer_search_abc=$(awk '{print $'$abc_index_number'}' < /tmp/abcindex)
-                # Change user input to our first search word
-                changed_search_abc=$(cat ${tmp}-user-input-abc | sed 's/[a-z]/a/g')
-                # Enter search alphabe into input format
-                search_abc=$(echo "$changed_search_abc" | sed 's/a/'$changer_search_abc'/g')
-                # Find line number of search_abc
-                cat $file |
-                grep -n '^'$search_abc'\| '$search_abc' ' |
-                awk -F ':' '{print "'$changer_search_abc'",$1,$1-1 }' > ${tmp}-result-line-number
+                # Search part 
+                # store seach target abc 
+                search_abc=$(cat /tmp/abcindex | awk '{print $'$sed_number'}')
+                # change user input to first abc 
+                search_word=$(echo $user_input_search_word | sed 's/[a-z]/'$search_abc'/g')
+                cat $file | 
+                grep -n ''^$search_word'\| '$search_word' ' | head -1 > ${tmp}-search-result-v1
                 # Setup loop stop case variable 
-                result=$(awk 'END{print NR}' < ${tmp}-result-line-number)
-                # Check loop stop 
-                if [[ $result == 0 ]];then 
-                    # Prepare search result
-                    prepareSearchResult "${tmp}-result-line-numbers" "$file" > ${tmp}-result-line-numbers-final
-                    # Divide file by search result
-                    divideFile "${tmp}-result-line-numbers-final"
-                    break
+                result=$(cat ${tmp}-search-result-v1  | awk 'END{print NR}')
+                # Check loop stop
+                if [ $result -eq 0 ];then 
+                    # Check divide result or copy result
+                    if [[ -s ${tmp}-search-result-v1-collect ]];then
+                        cat ${tmp}-search-result-v1-collect | awk -F ':' '{print $NF,$1,$1-1}' > ${tmp}-search-result-v2
+                        # Prepare search result
+                        prepareSearchResult "${tmp}-search-result-v2" "$file" > ${tmp}-search-result-v3 
+                        # Divide file by search result
+                        divideFile "${tmp}-search-result-v3"
+                    else 
+                        # Directly copy result file
+                        cat $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/"@@@" 
+                    fi 
+                    rm -rf ${tmp}-search-result-v1-collect
+                    break 
                 else 
-                    cat ${tmp}-result-line-number >> ${tmp}-result-line-numbers
+                    # Collect search result
+                    cat ${tmp}-search-result-v1 | awk '{print $0":'$search_abc'"}' >> ${tmp}-search-result-v1-collect
                 fi 
-                # Increase alphabet index
-                abc_index_number=$(($abc_index_number + 1))
-            done 
+                # increase sub number
+                sed_number=$(($sed_number + 1))
+            done  
         done 
     elif [ $levelType == 'roman' ];then 
         search_roman_number=1
@@ -223,7 +224,9 @@ do
                 search_number=$(echo $word | awk -F "@" '{print $1}' | sed 's/1/'${sed_number}'/g' )
                 cat $file | 
                 grep -n '^'$search_number'\| '$search_number' ' | head -1 > ${tmp}-search-result-v1 
+                # Setup loop stop case variable 
                 result=$(cat ${tmp}-search-result-v1  | awk 'END{print NR}')
+                # Check loop stop
                 if [ $result -eq 0 ];then 
                     # Check divide result or copy result
                     if [[ -s ${tmp}-search-result-v1-collect ]];then
@@ -247,7 +250,49 @@ do
             done  
         done 
     elif [ $levelType == 'lroman' ];then
-        # Write code here
+        # Loop by all files
+        for file in $(echo $files)
+        do
+            # Create directory for store this level result
+            createDirectory "$count" "$file"
+            # store user input to user_input_search_word variable
+            user_input_search_word=$(echo $word | awk -F "@" '{print $1}')
+            # Setup every file abc number 
+            sed_number=1
+            while true 
+            do 
+                # Search part 
+                # store seach target abc 
+                search_lroman=$(int2roman $sed_number | tr '[:upper:]' '[:lower:]')
+                # change user input to first abc 
+                search_word=$(echo $user_input_search_word | sed 's/[a-z]/'$search_lroman'/g')
+                cat $file | 
+                grep -n ''^$search_word'\| '$search_word' ' | head -1 > ${tmp}-search-result-v1
+                # Setup loop stop case variable 
+                result=$(cat ${tmp}-search-result-v1  | awk 'END{print NR}')
+                # Check loop stop
+                if [ $result -eq 0 ];then 
+                    # Check divide result or copy result
+                    if [[ -s ${tmp}-search-result-v1-collect ]];then
+                        cat ${tmp}-search-result-v1-collect | awk -F ':' '{print $NF,$1,$1-1}' > ${tmp}-search-result-v2
+                        # Prepare search result
+                        prepareSearchResult "${tmp}-search-result-v2" "$file" > ${tmp}-search-result-v3 
+                        # Divide file by search result
+                        divideFile "${tmp}-search-result-v3"
+                    else 
+                        # Directly copy result file
+                        cat $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/"@@@" 
+                    fi 
+                    rm -rf ${tmp}-search-result-v1-collect
+                    break 
+                else 
+                    # Collect search result
+                    cat ${tmp}-search-result-v1 | awk '{print $0":'$search_lroman'"}' >> ${tmp}-search-result-v1-collect
+                fi 
+                # increase sub number
+                sed_number=$(($sed_number + 1))
+            done  
+        done 
     fi 
     # Increase level number
 	count=$(($count + 1))
