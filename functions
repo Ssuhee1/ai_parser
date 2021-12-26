@@ -1,0 +1,215 @@
+#!/bin/bash
+
+function check_type() {
+    local int=$(echo $1 | grep '1' | awk 'END{print NR}')
+    if [ $int == 1 ];then 
+        echo int
+    else 
+        echo $1 | awk '{for(i=1;i<=length($0);i++){if(substr($0,i,1) == "I" || substr($0,i,1) == "V" || substr($0,i,1) == "X" || 
+        substr($0,i,1) == "L" || substr($0,i,1) == "C" || substr($0,i,1) == "D" || substr($0,i,1) == "M" || 
+        substr($0,i,1) == "i" || substr($0,i,1) == "v" || substr($0,i,1) == "x" || substr($0,i,1) == "l" || 
+        substr($0,i,1) == "c" || substr($0,i,1) == "d" || substr($0,i,1) == "m") {k=k+1}};if(k==length($1)){print "roman"} else {print "abc"}}'
+    fi 
+}
+
+function search_word_roman() {
+    # usage :: search_word_roman PART I end 
+
+    local upperRoman=$(echo $2 | grep 'I' | awk 'END{print NR}')
+    local lowerRoman=$(echo $2 | grep 'i' | awk 'END{print NR}')
+
+    # local upperRoman=$(echo $1 | grep 'I\|V\|X\|L\|C\|D\|M' | awk 'END{print NR}')
+    # local lowerRoman=$(echo $1 | grep 'i\|v\|x\|l\|c\|d\|m' | awk 'END{print NR}')
+    if [ $upperRoman == 1 ];then 
+        local _V=$(echo $2 | sed 's/I/V/g') 
+        local _X=$(echo $2 | sed 's/I/X/g') 
+        local _L=$(echo $2 | sed 's/I/L/g') 
+        local _C=$(echo $2 | sed 's/I/C/g') 
+        local _D=$(echo $2 | sed 's/I/D/g') 
+        local _M=$(echo $2 | sed 's/I/M/g')         
+        if [ $3 == 'start' ];then 
+            echo '^'$1' '$2'\|^'$1' '$_V'\|^'$1' '$_X'\|^'$1' '$_L'\|^'$1' '$_C'\|^'$1' '$_D'\|^'$1' '$_M''
+        elif [ $3 == 'mid' ];then 
+            echo ' '$1' '$2' \| '$1' '$_V' \| '$1' '$_X' \| '$1' '$_L' \| '$1' '$_C' \| '$1' '$_D' \| '$1' '$_M' '
+        elif [ $3 == 'end' ];then 
+            echo ''$1' '$2'$\|'$1' '$_V'$\|'$1' '$_X'$\|'$1' '$_L'$\|'$1' '$_C'$\|'$1' '$_D'$\|'$1' '$_M'$'
+        elif [ $3 == 'start-mid' ];then 
+            echo '^'$1' '$2'\|^'$1' '$_V'\|^'$1' '$_X'\|^'$1' '$_L'\|^'$1' '$_C'\|^'$1' '$_D'\|^'$1' '$_M'\| '$1' '$2' \| '$1' '$_V' \| '$1' '$_X' \| '$1' '$_L' \| '$1' '$_C' \| '$1' '$_D' \| '$1' '$_M' '
+        fi 
+    elif [ $lowerRoman == 1 ];then
+        local _v=$(echo $2 | sed 's/i/v/g') 
+        local _x=$(echo $2 | sed 's/i/x/g') 
+        local _l=$(echo $2 | sed 's/i/l/g') 
+        local _c=$(echo $2 | sed 's/i/c/g') 
+        local _d=$(echo $2 | sed 's/i/d/g') 
+        local _m=$(echo $2 | sed 's/i/m/g') 
+        if [ $3 == 'start' ];then 
+            echo '^'$1' '$2'\|^'$1' '$_v'\|^'$1' '$_x'\|^'$1' '$_l'\|^'$1' '$_c'\|^'$1' '$_d'\|^'$1' '$_m''
+        elif [ $3 == 'mid' ];then 
+            echo ' '$1' '$2' \| '$1' '$_v' \| '$1' '$_x' \| '$1' '$_l' \| '$1' '$_c' \| '$1' '$_d' \| '$1' '$_m' '
+        elif [ $3 == 'end' ];then 
+            echo ''$1' '$2'$\|'$1' '$_v'$\|'$1' '$_x'$\|'$1' '$_l'$\|'$1' '$_c'$\|'$1' '$_d'$\|'$1' '$_m'$'
+        elif [ $3 == 'start-mid' ];then 
+            echo '^'$1' '$2'\|^'$1' '$_v'\|^'$1' '$_x'\|^'$1' '$_l'\|^'$1' '$_c'\|^'$1' '$_d'\|^'$1' '$_m'\| '$1' '$2' \| '$1' '$_v' \| '$1' '$_x' \| '$1' '$_l' \| '$1' '$_c' \| '$1' '$_d' \| '$1' '$_m' '
+        fi
+    fi
+    
+}
+
+function search_word_int() {
+    # usage :: seach_word_int 1 11 end
+    
+    local first="$1"
+    local second="$2"
+    local third="$3"
+
+    local firstNum=$(echo $1 | awk '{for(i=1;i<=length($0);i++){if(substr($0,i,1) ~ /[0-9]/){k=k""substr($0,i,1)}};print k}')
+    local lastNum=$(echo $2 | awk '{for(i=1;i<=length($0);i++){if(substr($0,i,1) ~ /[0-9]/){k=k""substr($0,i,1)}};print k}')
+
+
+        if [ $3 == 'start' ];then 
+            for ((i=1;i<=$lastNum;i++))
+            do 
+                echo ^$(echo $1 | sed 's/1/'$i'/g' | sed 's/\./\\\./g')
+            done | xargs echo | sed 's/ /\\\|/g'
+        elif [ $3 == 'mid' ];then 
+            for ((i=1;i<=$lastNum;i++))
+            do 
+                echo $(echo $1 | sed 's/1/'$i'/g' | sed 's/\./\\\./g')
+            done | xargs echo | sed 's/ / \\\| /g' | sed 's/^/ /g' | sed 's/$/ /g'
+        elif [ $3 == 'end' ];then 
+            for ((i=1;i<=$lastNum;i++))
+            do 
+                echo $(echo $1 | sed 's/1/'$i'/g' | sed 's/\./\\\./g')$
+            done | xargs echo | sed 's/ /\\\|/g'
+        elif [ $3 == 'start-mid' ];then 
+            local start=$(for ((i=1;i<=$lastNum;i++)); do echo ^$(echo $1 | sed 's/1/'$i'/g' | sed 's/\./\\\./g'); done | xargs echo | sed 's/ /\\\|/g')
+            local mid=$(   for ((i=1;i<=$lastNum;i++)); do echo $(echo $1 | sed 's/1/'$i'/g' | sed 's/\./\\\./g'); done | xargs echo | sed 's/ / \\\| /g' | sed 's/^/ /g' | sed 's/$/ /g')
+            echo "$start\|$mid"
+        fi
+}
+
+function seach_word_abc() {
+    if [ $2 == 'start' ];then 
+        echo '^'$1''
+    elif [ $2 == 'mid' ];then 
+        echo ' '$1' '
+    elif [ $2 == 'end' ];then 
+        echo ''$1'$'
+    fi 
+}
+
+function roman2int() {
+    set -eu -o pipefail
+    roman_numerals=$(echo $1 | tr a-z A-Z)
+    if [[ "${roman_numerals//[IVXLCDM]/}" == "" ]];then 
+        number=$(
+            echo ${roman_numerals} |
+            sed 's/CM/DCD/g' |
+            sed 's/M/DD/g' |
+            sed 's/CD/CCCC/g' |
+            sed 's/D/CCCCC/g' |
+            sed 's/XC/LXL/g' |
+            sed 's/C/LL/g' |
+            sed 's/XL/XXXX/g' |
+            sed 's/L/XXXXX/g' |
+            sed 's/IX/VIV/g' |
+            sed 's/X/VV/g' |
+            sed 's/IV/IIII/g' |
+            sed 's/V/IIIII/g' |
+            tr -d '\n' |
+            wc -m
+        )
+        echo ${number}
+    else 
+        echo false 
+    fi 
+}
+
+function int2roman() {
+    # NUM
+	# Returns NUM in roman letters
+	#
+    local input=$1	# input num
+    local output=""	# Clear output string
+    local len=${#input}	# Initial length to count down
+    
+    roman_val() { # NUM one five ten
+    # This sub does the basic 'roman' algorythm
+    #
+        local N=$1
+        local one=$2
+        local five=$3
+        local ten=$4
+        local out=""
+        
+        case $N in
+        0)	out+=""	;;
+        [123])	while [[ $N -gt 0 ]]
+            do	out+="$one"
+                N=$(($N-1))
+            done
+            ;;
+        4)	out+="$one$five"	;;
+        5)	out+="$five"	;;
+        [678])	out+="$five"
+            N=$(($N-5))
+            while [[ $N -gt 0 ]]
+            do	out+="$one"
+                N=$(($N-1))
+            done
+            ;;
+        9)	while [[ $N -lt 10 ]]
+            do	out+="$one"
+                N=$(($N+1))
+            done
+            out+="$ten"
+            ;;
+        esac
+        echo $out
+    }
+    
+    while [[ $len -gt 0  ]]
+    do	# There are letters to add
+        local num=${input:0:1}
+        # Do action according position
+        case $len in
+        1)	# 1
+            output+="$(roman_val $num I V X)"
+            ;;
+        2)	# 10
+            output+="$(roman_val $num X L C)"
+            ;;
+        3)	# 100
+            output+="$(roman_val $num C D M)"
+            ;;
+        *)	# 1000+
+            # 10'000 gets a line above, 100'000 gets a line on the left.. how to?
+            num=${input:0:(-3)}
+            while [[ $num -gt 0 ]]
+            do	output+="M"
+                num=$(($num-1))
+            done
+            
+            ;;
+        esac
+        input=${input:1} ; len=${#input}
+    done
+    echo $output
+}
+
+function combine2file() { 
+    # Store into variable from arguments
+    file_1="$1"
+    file_2="$2"
+    # Set up line index
+    line_count=1 
+    # Read first file line by line
+    while read -r line 
+    do 
+        # Print first file's line and second file's same indexed line.
+        echo $line $(awk 'NR=='$line_count'' < $file_2)
+        # Increase line index
+        line_count=$(($line_count + 1))
+    done < $file_1
+}

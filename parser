@@ -1,0 +1,310 @@
+#!/bin/bash 
+
+# Setup up useful file and global variable 
+tmp=/tmp/tmp_file_$$
+echo {a..z}{a..z}{a..z} > /tmp/lineindex
+echo {a..z} > /tmp/abcindex
+parser=./
+uploads=$parser/uploads
+
+# Setup useful functions
+source './functions'
+
+# Check input file is html or pdf 
+if [ $(echo $1 | awk -F '.' '{print $NF}') != 'pdf' ] ;then 
+	echo html file 
+else 
+    echo pdf 
+    pdftotext -layout -nopgbrk "$uploads/$1" ${tmp}_coverted_data
+
+    # remove empty line  
+    cat ${tmp}_coverted_data | awk 'NF!=0' > ${tmp}_coverted_data_tmp
+
+	# pdf_cleaning $tmp_coverted_data > $tmp_cleaned_data
+    while read -r line; do echo $line; done < ${tmp}_coverted_data_tmp > ${tmp}_cleaned_data 
+
+    # Setup file body range (now manually ==> change to auto)
+    # Body first line number
+    first_range=909
+    # Body end line number 
+    second_range=17858
+
+    # Divide body   
+    cat ${tmp}_cleaned_data | awk ''$first_range' < NR && NR < '$second_range'' > ${tmp}_cleaned_data-temp || exit 1
+    mv ${tmp}_cleaned_data-temp ${tmp}_cleaned_data
+fi
+
+# Make directory pdf to text file store  
+mkdir $parser/result-0
+
+# Copy cleaned data to tmp directory 
+cp ${tmp}_cleaned_data $parser/result-0
+
+# Loop by parsing level 
+# Setup level count 
+count=0
+for main_word in $(echo $2)
+do
+    # Create result storing directory 
+	mkdir $parser/result-$(($count + 1))
+    # Read all input files 
+	files=$(find $parser/result-${count} -type f | sort)
+    # Store level type into check variable 
+    levelType=$(echo $main_word | awk -F "@" '{print $NF}')  
+    # Store level key word into word variable 
+    word=$(echo $main_word | awk -F '@' '{$NF="";print}' | sed 's/ /@/g')
+    # Result temp directory name store into result_filename variable 
+    result_filename="$parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')"
+    # Check level type 
+    if [ $levelType == 'ug' ];then 
+        # Loop by file 
+        for file in $(echo $files)
+        do 
+            # Create directory
+            mkdir -p $result_filename
+            # Search part
+            cat $file |
+            grep -n ''$(seach_word_abc $(echo $word | sed 's/@/ /g'))'' | 
+            sed 's/ /_/g' | 
+            awk -F ':' '{print $2,$1,$1-1}' > ${tmp}-combination-data-v1
+            
+            if [[ $count == 0 ]];then 
+                lineIdIndex=1
+                while read -r lineI
+                do 
+                    echo $(awk '{print $'$lineIdIndex'}' /tmp/lineindex)'<sep_index>'$lineI
+                    lineIdIndex=$(($lineIdIndex + 1))
+                done < ${tmp}-combination-data-v1 > ${tmp}-combination-data-v2
+            else 
+                cat ${tmp}-combination-data-v1 > ${tmp}-combination-data-v2
+            fi 
+
+            cat ${tmp}-combination-data-v2 | awk '{print $1,$2}' > ${tmp}-combination-one
+
+
+            cat ${tmp}-combination-data-v2 | awk '{print $3}' | tail -n +2  > ${tmp}-combination-two
+            cat $file | awk 'END{print NR}' >> ${tmp}-combination-two
+
+            combine2file "${tmp}-combination-one" "${tmp}-combination-two" > ${tmp}-combination-final
+
+            # pr -m -t ${tmp}-combination-one ${tmp}-combination-two > ${tmp}-combination-final
+
+            # Divide part 
+            while read -r divide_i
+            do 
+                # echo $divide_i
+                file_name=$(echo $divide_i | awk '{print $1}')
+                range_1=$(echo $divide_i | awk '{print $2}')
+                range_2=$(echo $divide_i | awk '{print $3}')
+                sed -n "$range_1,${range_2}p" $file > $result_filename/$file_name 
+            done < ${tmp}-combination-final
+        done
+    elif [ $levelType == 'abc' ];then 
+        # Loop by all files
+        for file in $(echo $files)
+        do
+            # Create directory for store result
+            mkdir -p $result_filename
+            # User input abc
+            echo "$word" | 
+            awk -F "@" '{print $1}' > ${tmp}-user-input-abc
+            # Seperate bracket and alphabet
+            cat ${tmp}-user-input-abc | 
+            tr -d '()' > ${tmp}-end-abc
+            # Find abc index 
+            cat /tmp/abcindex | 
+            sed 's/ /\n/g' |
+            grep -n ''$(cat ${tmp}-end-abc)'' |
+            awk -F ":" '{print $1}' > ${tmp}-end-abc-index
+            # Setup alphabet index equal to 1. Searching start from a to user input alphabet
+            abc_index_number=1
+            # Loop : stop until search result in empty
+            while true 
+            do 
+                # Search alphabet
+                changer_search_abc=$(awk '{print $'$abc_index_number'}' < /tmp/abcindex)
+                # Change user input to our first search word
+                changed_search_abc=$(cat ${tmp}-user-input-abc | sed 's/[a-z]/a/g')
+                # Enter search alphabe into input format
+                search_abc=$(echo "$changed_search_abc" | sed 's/a/'$changer_search_abc'/g')
+                # Find line number of search_abc
+                cat $file |
+                grep -n '^'$search_abc'\| '$search_abc' ' |
+                awk -F ':' '{print "'$changer_search_abc'",$1,$1-1 }' > ${tmp}-result-line-number
+                # Setup first stop case variable 
+                result=$(awk 'END{print NR}' < ${tmp}-result-line-number)
+                # Check first stop 
+                if [[ $result == 0 ]];then 
+                    # Filename (1st column) and start line number (2nd column) is ok 
+                    cat ${tmp}-result-line-numbers | awk '{print $1,$2}' > ${tmp}-result-line-numbers-col_1_2
+                    # End line number is 1 row behind => Preparing end line number
+                    cat ${tmp}-result-line-numbers | awk '{print $3}' | tail -n +2 > ${tmp}-result-line-numbers-col_3
+                    cat $file | awk 'END{print NR}' >> ${tmp}-result-line-numbers-col_3
+                    # Combine prepared two data
+                    combine2data "${tmp}-result-line-numbers-col_1_2" "${tmp}-result-line-numbers-col_3" > ${tmp}-result-line-numbers-final
+                    # Divide file
+                    while read -r line 
+                    do 
+                        # Make directory 
+                        mkdir -p ./this_is_test_of_abc
+                        # Setup newly create file name and line indexs
+                        filename=$(echo $line | awk '{print $1}')
+                        line_start_index=$(echo $line | awk '{print $2}')
+                        line_end_index=$(echo $line | awk '{print $3}')
+                        cat $file | 
+                        sed -n "$line_start_index,${line_end_index}p" > ./this_is_test_of_abc/$filename
+                    done < ${tmp}-result-line-numbers-final
+                    break
+                else 
+                    cat ${tmp}-result-line-number >> ${tmp}-result-line-numbers
+                fi 
+                # Increase alphabet index
+                abc_index_number=$(($abc_index_number + 1))
+            done 
+        done 
+    elif [ $levelType == 'roman' ];then 
+        search_roman_number=1
+        for file in $(echo $files)
+        do
+            mkdir -p $result_filename
+            while true 
+            do
+                cat $file | grep -nx ''$(echo $word | sed 's/@/ /g' | awk '{print $1}')" "$(int2roman $search_roman_number)'\|'$(echo $word | sed 's/@/ /g' | awk '{print $1}')" "$(int2roman $search_roman_number)"[A..Z]"' \|^\['$(echo $word | sed 's/@/ /g' | awk '{print $1}')" "$(int2roman $search_roman_number)"[A..Z]"'' | sed 's/ /_/g' > ${tmp}-roman-search-result 
+
+                result=$(cat ${tmp}-roman-search-result | awk 'END {print NR}')
+
+                if [[ $result == 0 ]];then 
+                    cat ${tmp}-roman-search-result-collect | awk -F ':' '{print $NF,$1,$1-1}' > ${tmp}-combined-data
+
+                    lineIdIndex=1
+                    while read -r lineI
+                    do 
+                        echo $(awk '{print $'$lineIdIndex'}' /tmp/lineindex)'<sep_index>'$lineI
+                        lineIdIndex=$(($lineIdIndex + 1))
+                    done < ${tmp}-combined-data > ${tmp}-combination-data-v2
+
+                    cat ${tmp}-combination-data-v2 | awk '{print $1,$2}' > ${tmp}-combined-one
+                    cat ${tmp}-combination-data-v2 | awk '{print $3}' | tail -n +2 > ${tmp}-combined-two
+                    cat $file | awk 'END{print NR}' >> ${tmp}-combined-two
+                    pr -m -t ${tmp}-combined-one ${tmp}-combined-two > ${tmp}-combined-data-final 
+                    while read -r divide_j 
+                    do        
+                        file_name=""; range_1="";range_2=""
+                        file_name=$(awk '{print $1}' <<< $divide_j)
+                        range_1=$(awk '{print $2}' <<< $divide_j)
+                        range_2=$(awk '{print $3}' <<< $divide_j)
+                        sed -n "$range_1,${range_2}p" $file > $result_filename/$file_name 
+                    done <  ${tmp}-combined-data-final         
+                    rm -rf ${tmp}-collected-result 
+                    break
+                else 
+                    cat ${tmp}-roman-search-result >> ${tmp}-roman-search-result-collect
+                fi 
+
+                search_roman_number=$(($search_roman_number + 1))
+            done 
+        done 
+    elif [ $levelType == 'range' ];then 
+        sed_number=1
+        for file in $(echo $files)
+        do
+            # Create directory 
+            mkdir -p $result_filename
+
+            # Search part
+            search_position=$(echo $word | awk -F '@' '{print $3}')
+            while true 
+            do
+                # ''$(seach_word_abc $(echo $word | sed 's/@/ /g'))''
+                search_number=$(echo $word | awk -F '@' '{print $1}' | sed 's/1/'$sed_number'/g')
+                cat $file | grep -n '^'$sed_number'\.\|^'$sed_number'.\.\| '$sed_number'\. \| '$sed_number'.\. ' > ${tmp}-search-result
+                result=$(cat ${tmp}-search-result | awk 'END{print NR}')
+                if [ $result == 0 ];then
+                    cat ${tmp}-collected-result | awk -F ':' '{print $NF,$1,$1-1}' > ${tmp}-combined-data
+                    cat ${tmp}-combined-data | awk '{print $1,$2}' > ${tmp}-combined-one
+                    cat ${tmp}-combined-data | awk '{print $3}' | tail -n +2 > ${tmp}-combined-two
+                    cat $file | awk 'END{print NR}' >> ${tmp}-combined-two
+                    pr -m -t ${tmp}-combined-one ${tmp}-combined-two > ${tmp}-combined-data-final 
+                    while read -r divide_j 
+                    do        
+                        file_name=""; range_1="";range_2=""
+                        file_name=$(awk '{print $1}' <<< $divide_j)
+                        range_1=$(awk '{print $2}' <<< $divide_j)
+                        range_2=$(awk '{print $3}' <<< $divide_j)
+                        sed -n "$range_1,${range_2}p" $file > $result_filename/$file_name 
+                    done <  ${tmp}-combined-data-final         
+                   rm -rf ${tmp}-collected-result 
+                    break
+                else 
+                    cat ${tmp}-search-result | awk '{print $0,":'$sed_number'"}' >> ${tmp}-collected-result 
+                fi 
+                sed_number=$(($sed_number + 1))
+            done 
+
+            # Divide part 
+
+        done 
+    elif [ $levelType == 'sub' ];then 
+        for file in $(echo $files)
+        do
+            # Create directory 
+            mkdir -p $result_filename
+
+            # Search part
+            sed_number=1
+            while true 
+            do 
+                search_number=$(echo $word | awk -F "@" '{print $1}' | sed 's/1/'${sed_number}'/g' )
+                cat $file | 
+                grep -n '^'$search_number'\| '$search_number' ' | head -1 > ${tmp}-temp-each-data 
+                result=$(cat ${tmp}-temp-each-data  | awk 'END{print NR}')
+                if [ $result -eq 0 ];then 
+                    # echo $file huwaagdah
+
+                    if [[ -s ${tmp}-collection-data ]];then 
+                        cat ${tmp}-collection-data | awk -F ':' '{print $NF,$1,$1-1}' > ${tmp}-combination-data
+                        cat ${tmp}-combination-data | awk '{print $1,$2}' > ${tmp}-combination-data-one
+                        cat ${tmp}-combination-data | awk '{print $3}' | tail -n +2 > ${tmp}-combination-data-two
+                        cat $file | awk 'END{print NR}' >> ${tmp}-combination-data-two
+                        pr -m -t ${tmp}-combination-data-one ${tmp}-combination-data-two > ${tmp}-combination-data-final 
+
+                        
+                        while read -r divide_k 
+                        do 
+                            file_name=""; range_1="";range_2=""
+                            file_name=$(awk '{print $1}' <<< $divide_k)
+                            range_1=$(awk '{print $2}' <<< $divide_k)
+                            range_2=$(awk '{print $3}' <<< $divide_k)
+                            sed -n "$range_1,${range_2}p" $file > $result_filename/$file_name 
+                        done < ${tmp}-combination-data-final 
+
+                    else 
+                        cat $file > $result_filename/"@@@" 
+                    fi 
+                    rm -rf ${tmp}-collection-data
+                    break 
+                else 
+                    cat ${tmp}-temp-each-data | awk '{print $0":'$sed_number'"}' >> ${tmp}-collection-data
+                fi 
+
+                sed_number=$(($sed_number + 1))
+            done  
+
+            # Divide part 
+
+        done 
+    fi 
+    
+	count=$(($count + 1))
+done 
+
+# To csv 
+
+
+for csv_row in $(find $(echo $parser/result* | sed 's/ /\n/g' | tail -1) -type f | sort) ; do echo $(echo $csv_row | awk -F '/' '{$1="";$2="";print $0}' | awk -F '<sep_index>' '{print $2}' | sed 's/ /\",\"/g' | sed 's/^/\"/g' | sed 's/$/\"/g')',"'$(cat $csv_row)'"'  ;done > $parser/final-$$.csv
+
+echo '{ "output": "final-'$$'.csv"}'
+
+# rm -rf $parser/result-{1,2,3}
+rm -rf ${tmp}-*
+# rm -rf $parser/result-*
