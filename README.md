@@ -14,10 +14,10 @@ This code can parse pdf and html file by specified rule
 
 
 ## Dependecies
-1) pdftotext 
+1) pdftotext \n
 sudo apt install pdftotext
 
-2) html2text 
+2) html2text \n
 sudo apt install html2text
 
 ## How to run 
