@@ -14,13 +14,17 @@ This code can parse pdf and html file by specified rule
 ## Dependecies
 1) pdftotext
 ```
-    sudo apt install pdftotext
+    sudo apt install pdftotext -y
+```
+2) htmltopdf (A)
+```
+    pip install pdfkit
+```
+3) htmltopdf (B)
+```
+    sudo apt install wkhtmltopdf -y
 ```
 
-2) html2text
-```
-    sudo apt install html2text
-```
 
 ## How to run 
 1) Put your file into uploads directory
@@ -35,6 +39,11 @@ This code can parse pdf and html file by specified rule
 ```
     
 ## Usage example 
+16948 rows data ===> 5 lvl ==> 23m19,789s  
 ```
     rm -rf result* final* ; time ./parser-v1 '1.pdf' 'Part@I@start@roman 1\.@620\.@mid@range (1)@(18)@start-mid@sub'
+```
+1219 rows data ===> 5 lvl ==> 2m13,278s  
+```
+    rm -rf result* final* ; time ./parser-v1 '2.pdf' 'PART@I@start@roman 1\.@67\.@mid@range (1)@(18)@start-mid@sub (z)@mid@abc (i)@mid@lroman'
 ```

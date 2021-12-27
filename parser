@@ -23,9 +23,7 @@ uploads=$parser/uploads
 source './functions'
 
 ##### Check input file is html or pdf 
-if [ $(echo $1 | awk -F '.' '{print $NF}') != 'pdf' ] ;then 
-	echo html file 
-else 
+if [ $(echo $1 | awk -F '.' '{print $NF}') == 'pdf' ] ;then 
     echo pdf 
     pdftotext -layout -nopgbrk "$uploads/$1" ${tmp}_coverted_data
 
@@ -37,13 +35,32 @@ else
 
     # Setup file body range (now manually ==> change to auto)
     # Body first line number
-    first_range=909
+    # first_range=0
+    first_range=392
     # Body end line number 
-    second_range=17858
+    # second_range=$(awk 'END {print NR}' < ${tmp}_cleaned_data)
+    second_range=4943
 
     # Divide body   
     cat ${tmp}_cleaned_data | awk ''$first_range' < NR && NR < '$second_range'' > ${tmp}_cleaned_data-temp || exit 1
     mv ${tmp}_cleaned_data-temp ${tmp}_cleaned_data
+else 
+    if [[ $(echo $1 | awk '{if($0~/^http/){print "true"}else{print "false"}}') == 'true' ]];then 
+        python3 './python/html2pdf.py' ''$1'' "${tmp}-html-to-pdf file"
+        pdftotext -layout -nopgbrk "${tmp}-html-to-pdf file" ${tmp}_coverted_data
+        cat ${tmp}_coverted_data | awk 'NF!=0' > ${tmp}_coverted_data_tmp
+        while read -r line; do echo $line; done < ${tmp}_coverted_data_tmp > ${tmp}_cleaned_data 
+        # Body first line number
+        first_range=0
+        # first_range=392
+        # Body end line number 
+        second_range=$(awk 'END {print NR}' < ${tmp}_cleaned_data)
+        # second_range=4943
+
+        # Divide body   
+        cat ${tmp}_cleaned_data | awk ''$first_range' < NR && NR < '$second_range'' > ${tmp}_cleaned_data-temp || exit 1
+        mv ${tmp}_cleaned_data-temp ${tmp}_cleaned_data
+    fi 
 fi
 
 ##### Make directory, store text file 
@@ -134,22 +151,25 @@ do
             done  
         done 
     elif [ $levelType == 'roman' ];then 
-        search_roman_number=1
         for file in $(echo $files)
         do
             # Create directory for store this level result
             createDirectory "$count" "$file"
+            # user input 
+            user_input_search_word=$(echo $word | awk -F "@" '{print $1}')
             # Search roman number from file and 
             #   if result is founded search next roman number 
             #   or result is not founded stop searching
+            search_roman_number=1
             while true 
             do
                 # Search part
                 cat $file | 
-                grep -nx ''$(echo $word | sed 's/@/ /g' | awk '{print $1}')" "$(int2roman $search_roman_number)'\|'$(echo $word | 
-                sed 's/@/ /g' | 
-                awk '{print $1}')" "$(int2roman $search_roman_number)"[A..Z]"' \|^\['$(echo $word | sed 's/@/ /g' | 
-                awk '{print $1}')" "$(int2roman $search_roman_number)"[A..Z]"'' | 
+                grep -nx ''$user_input_search_word" "$(int2roman $search_roman_number)'' | 
+                # grep -nx ''$(echo $word | sed 's/@/ /g' | awk '{print $1}')" "$(int2roman $search_roman_number)'\|'$(echo $word | 
+                # sed 's/@/ /g' | 
+                # awk '{print $1}')" "$(int2roman $search_roman_number)"[A-Z]"' \|^\['$(echo $word | sed 's/@/ /g' | 
+                # awk '{print $1}')" "$(int2roman $search_roman_number)"[A-Z]"'' | 
                 sed 's/ /_/g' > ${tmp}-search-result-v1 
                 # Setup loop stop case variable 
                 result=$(cat ${tmp}-search-result-v1 | awk 'END {print NR}')
@@ -188,7 +208,7 @@ do
                 # setup search word
                 search_number=$(echo $word | awk -F '@' '{print $1}' | sed 's/1/'$sed_number'/g')
                 # search word
-                cat $file | grep -n '^'$sed_number'\.\|^'$sed_number'.\.\| '$sed_number'\. \| '$sed_number'.\. ' > ${tmp}-search-result-v1
+                cat $file | grep -n '^'$search_number' \| '$search_number' ' > ${tmp}-search-result-v1
                 # Setup loop stop case variable 
                 result=$(cat ${tmp}-search-result-v1 | awk 'END{print NR}')
                 # Check loop stop
@@ -203,6 +223,47 @@ do
                     # Remove first search result 
                     rm -rf ${tmp}-search-result-v1-collect 
                     break
+                else 
+                    # Collect search result
+                    cat ${tmp}-search-result-v1 | awk '{print $0,":'$sed_number'"}' >> ${tmp}-search-result-v1-collect 
+                fi 
+                # increase range number
+                sed_number=$(($sed_number + 1))
+            done 
+        done 
+    elif [ $levelType == 'inRange' ];then 
+        for file in $(echo $files)
+        do
+            # Create directory for store this level result
+            createDirectory "$count" "$file"
+            # Search roman number from file and 
+            #   if result is founded search next roman number 
+            #   or result is not founded stop searching
+            sed_number=1
+            while true 
+            do
+                # Search part 
+                # setup search word
+                search_number=$(echo $word | awk -F '@' '{print $1}' | sed 's/1/'$sed_number'/g')
+                # search word
+                cat $file | grep -n '^'$search_number' \| '$search_number' ' > ${tmp}-search-result-v1
+                # Setup loop stop case variable 
+                result=$(cat ${tmp}-search-result-v1 | awk 'END{print NR}')
+                # Check loop stop
+                if [ $result == 0 ];then
+                    # Check divide result or copy result
+                    if [[ -s ${tmp}-search-result-v1-collect ]];then
+                        cat ${tmp}-search-result-v1-collect | awk -F ':' '{print $NF,$1,$1-1}' > ${tmp}-search-result-v2
+                        # Prepare search result
+                        prepareSearchResult "${tmp}-search-result-v2" "$file" > ${tmp}-search-result-v3 
+                        # Divide file by search result
+                        divideFile "${tmp}-search-result-v3"
+                    else 
+                        # Directly copy result file
+                        cat $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/"@@@" 
+                    fi 
+                    rm -rf ${tmp}-search-result-v1-collect
+                    break 
                 else 
                     # Collect search result
                     cat ${tmp}-search-result-v1 | awk '{print $0,":'$sed_number'"}' >> ${tmp}-search-result-v1-collect 
@@ -293,6 +354,93 @@ do
                 sed_number=$(($sed_number + 1))
             done  
         done 
+    elif [ $levelType == 'onlyRoman' ];then
+        sed_number=1
+        for file in $(echo $files)
+        do
+            # Create directory for store this level result
+            createDirectory "$count" "$file"
+            # user input 
+            user_input_search_word=$(echo $word | awk -F "@" '{print $1}')
+            # Search roman number from file and 
+            #   if result is founded search next roman number 
+            #   or result is not founded stop searching
+            while true 
+            do
+                # Search part 
+                # setup search word
+                search_number=$(int2roman $sed_number)
+                # search word
+                search_word=$(echo $user_input_search_word | sed 's/[A-Z]/'$search_number'/g')
+                cat $file | grep -n '^'$search_word'' > ${tmp}-search-result-v1
+                # Setup loop stop case variable 
+                result=$(cat ${tmp}-search-result-v1 | awk 'END{print NR}')
+                # Check loop stop
+                if [ $result == 0 ];then
+                    cat ${tmp}-search-result-v1-collect | awk -F ':' '{print $NF,$1,$1-1}' > ${tmp}-search-result-v2
+                    # Check first level or not
+                    setupFilenameIndex "$count" "${tmp}-search-result-v2" > ${tmp}-search-result-v3
+                    # Prepare search result
+                    prepareSearchResult "${tmp}-search-result-v3" "$file" > ${tmp}-search-result-v4 
+                    # Divide file by search result
+                    divideFile "${tmp}-search-result-v4"
+                    # Remove first search result 
+                    rm -rf ${tmp}-search-result-v1-collect 
+                    break
+                else 
+                    # Collect search result
+                    cat ${tmp}-search-result-v1 | awk '{print $0,":'$search_number'"}' >> ${tmp}-search-result-v1-collect 
+                fi 
+                # increase range number
+                sed_number=$(($sed_number + 1))
+            done 
+        done 
+    elif [ $levelType == 'numberBlvl' ];then
+        # Loop by all files
+        for file in $(echo $files)
+        do
+            # Create directory for store this level result
+            createDirectory "$count" "$file"
+            # Search word before number setup
+            if [[ $(echo $file | awk -F '/' '{print $NF}' | awk '{if($0 ~/^[a-z]/){print "true"} else {print "false"}}') == 'true' ]];then 
+                search_half_word=$(echo $file | awk -F "<sep_index>" '{print $2}')
+            else 
+                search_half_word=$(echo $file | xargs basename)
+            fi 
+
+            sed_number=1
+            while true 
+            do 
+                # Search part 
+                # change user input to first abc 
+                search_word=$(echo "$search_half_word\.$sed_number")
+                cat $file | 
+                grep -n ''^$search_word'\| '$search_word' ' | head -1 > ${tmp}-search-result-v1
+                # Setup loop stop case variable 
+                result=$(cat ${tmp}-search-result-v1  | awk 'END{print NR}')
+                # Check loop stop
+                if [ $result -eq 0 ];then 
+                    # Check divide result or copy result
+                    if [[ -s ${tmp}-search-result-v1-collect ]];then
+                        cat ${tmp}-search-result-v1-collect | awk -F ':' '{print $NF,$1,$1-1}' > ${tmp}-search-result-v2
+                        # Prepare search result
+                        prepareSearchResult "${tmp}-search-result-v2" "$file" > ${tmp}-search-result-v3 
+                        # Divide file by search result
+                        divideFile "${tmp}-search-result-v3"
+                    else 
+                        # Directly copy result file
+                        cat $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/"@@@" 
+                    fi 
+                    rm -rf ${tmp}-search-result-v1-collect
+                    break 
+                else 
+                    # Collect search result
+                    cat ${tmp}-search-result-v1 | awk '{print $0":'$sed_number'"}' >> ${tmp}-search-result-v1-collect
+                fi 
+                # increase sub number
+                sed_number=$(($sed_number + 1))
+            done  
+        done 
     fi 
     # Increase level number
 	count=$(($count + 1))
@@ -305,6 +453,6 @@ for csv_row in $(find $(echo $parser/result* | sed 's/ /\n/g' | tail -1) -type f
 echo '{ "output": "final-'$$'.csv"}'
 
 ##### Clean temp file and directory
-rm -rf ${tmp}-*
+rm -rf ${tmp}*
 # Remove comment in production version !!!
 # rm -rf $parser/result-*
