@@ -217,6 +217,7 @@ function combine2file() {
 # create each level result directory
 function createDirectory() {
     mkdir -p $parser/result-$(($1 + 1))/$(echo $2 | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')
+    mkdir -p $parser/result-line-$(($1 + 1))/$(echo $2 | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')
 }
 
 # Check level number is first or not 
@@ -254,6 +255,28 @@ function divideFile() {
         range_1=$(echo $divide_i | awk '{print $2}')
         range_2=$(echo $divide_i | awk '{print $3}')
         # Divide input file by search result file and write to new file
+        echo divideFile : $file | sed 's/result/result-line/g'
         sed -n "$range_1,${range_2}p" $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/$file_name 
+        sed -n "$range_1,${range_2}p" "$(echo $file | sed 's/result/result-line/g')" > $parser/result-line-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/$file_name 
     done < $1
+}
+
+function exportCsvFile() {
+    # Export csv file name 
+    local fileName="$1.csv"
+    # Link name 
+    local link="$2"
+    # Csv table header level count
+    local levelCount=7
+    # Empty level value
+    local empty_col=$(find $(echo $parser/result-[0-9]* | sed 's/ /\n/g' | tail -1) -type f | head -1 | awk -F "/" '{$1="";$2="";print $0}' |  awk -F '<sep_index>' '{print $2}' | awk '{for(i=1;i<='$levelCount'-NF;i++){k=k" -"};print substr(k,2)}')
+    # Csv file header 
+    local header=$(echo - $(eval echo Level_{1..$levelCount}) Link PageNumber Text)
+    echo $header | sed 's/ /\",\"/g' | sed 's/^/\"/g' | sed 's/$/\"/g' > $parser/$fileName
+    # Create csv body part
+    for csv_row in $(find $(echo $parser/result-[0-9]* | sed 's/ /\n/g' | tail -1) -type f | sort); 
+    do 
+        # Ene hesgiig ahiad jaahan saijruulah heregtei
+        echo '"'$(echo $fileName)'",'$(echo $csv_row | awk -F '/' '{$1="";$2="";print $0}' | awk -F '<sep_index>' '{print $2}' | sed 's/ /\",\"/g' | sed 's/^/\"/g' | sed 's/$/\"/g')','$(echo $empty_col | sed 's/ /\",\"/g' | sed 's/^/\"/g' | sed 's/$/\"/g')',"'$(echo $link)'","'$(head -1 $(echo $csv_row | sed 's/result/result-line/g'))'","'$(cat $csv_row)'"';
+    done >> $parser/${fileName}
 }

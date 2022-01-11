@@ -15,7 +15,7 @@ echo {a..z}{a..z}{a..z} > /tmp/lineindex
 # level abc parser user 26 alphabet
 echo {a..z} > /tmp/abcindex 
 # current directory
-parser='./'
+parser='.'
 # input file stored directory
 uploads=$parser/uploads
 
@@ -24,8 +24,15 @@ source './functions'
 
 ##### Check input file is html or pdf 
 if [ $(echo $1 | awk -F '.' '{print $NF}') == 'pdf' ] ;then 
-    echo pdf 
+    # echo pdf 
     pdftotext -layout -nopgbrk "$uploads/$1" ${tmp}_coverted_data
+
+    pageNumber=$(pdftk "$uploads/$1" dump_data | grep NumberOfPages | awk '{print $NF}')
+    for ((pageNum=1;pageNum<=$pageNumber;pageNum++))
+    do
+        pdftotext -layout -f $pageNum -l $pageNum -nopgbrk "$uploads/$1" - |
+        awk '{if(NF!=0){print "'$pageNum'"}}' 
+    done > ${tmp}-line-number
 
     # remove empty line  
     cat ${tmp}_coverted_data | awk 'NF!=0' > ${tmp}_coverted_data_tmp
@@ -36,10 +43,10 @@ if [ $(echo $1 | awk -F '.' '{print $NF}') == 'pdf' ] ;then
     # Setup file body range (now manually ==> change to auto)
     # Body first line number
     # first_range=0
-    first_range=392
-    # Body end line number 
+    first_range="$3"
+    # Body end line number
     # second_range=$(awk 'END {print NR}' < ${tmp}_cleaned_data)
-    second_range=4943
+    second_range="$4"
 
     # Divide body   
     cat ${tmp}_cleaned_data | awk ''$first_range' < NR && NR < '$second_range'' > ${tmp}_cleaned_data-temp || exit 1
@@ -51,23 +58,27 @@ else
         cat ${tmp}_coverted_data | awk 'NF!=0' > ${tmp}_coverted_data_tmp
         while read -r line; do echo $line; done < ${tmp}_coverted_data_tmp > ${tmp}_cleaned_data 
         # Body first line number
-        first_range=0
-        # first_range=392
+        # first_range=0
+        first_range="$3"
         # Body end line number 
-        second_range=$(awk 'END {print NR}' < ${tmp}_cleaned_data)
-        # second_range=4943
+        # second_range=$(awk 'END {print NR}' < ${tmp}_cleaned_data)
+        second_range="$4"
 
         # Divide body   
         cat ${tmp}_cleaned_data | awk ''$first_range' < NR && NR < '$second_range'' > ${tmp}_cleaned_data-temp || exit 1
+        cat ${tmp}-line-number | awk ''$first_range' < NR && NR < '$second_range'' > ${tmp}-line-number-temp || exit 1
         mv ${tmp}_cleaned_data-temp ${tmp}_cleaned_data
+        mv ${tmp}-line-number-temp ${tmp}-line-number
     fi 
 fi
 
 ##### Make directory, store text file 
 # make directory
 mkdir $parser/result-0
+mkdir $parser/result-line-0
 # Copy cleaned data to tmp directory 
 cp ${tmp}_cleaned_data $parser/result-0
+cat ${tmp}-line-number > $parser/result-line-0/tmp_file_$$_cleaned_data
 
 ##### Loop by parsing level 
 # Setup level count 
@@ -447,12 +458,12 @@ do
 done 
 
 ##### Result convert to csv
-for csv_row in $(find $(echo $parser/result* | sed 's/ /\n/g' | tail -1) -type f | sort) ; do echo $(echo $csv_row | awk -F '/' '{$1="";$2="";print $0}' | awk -F '<sep_index>' '{print $2}' | sed 's/ /\",\"/g' | sed 's/^/\"/g' | sed 's/$/\"/g')',"'$(cat $csv_row)'"'  ;done > $parser/final-$$.csv
+exportCsvFile "$5" "$6"
 
 ##### Print result csv file name
 echo '{ "output": "final-'$$'.csv"}'
 
 ##### Clean temp file and directory
-rm -rf ${tmp}*
+rm -rf ${tmp}* ./result-line*
 # Remove comment in production version !!!
 # rm -rf $parser/result-*

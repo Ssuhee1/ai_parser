@@ -1,0 +1,25 @@
+#!/bin/bash
+
+function executeParserShell() {
+    while read -r line 
+    do 
+        local fileIndex=$(echo $line | awk '{print $1}')
+        local fileName=$(echo $line | awk '{print $2}')
+        local start_line=$(echo $line | awk '{print $3}')
+        local end_line=$(echo $line | awk '{print $4}')
+        local arg=$(echo $line | awk '{print $5}')
+        local link=$(echo $line | awk '{print $6}')
+        # echo $arg | sed 's/_/ /g'
+        ./parser-v1 "$(echo ./uploads/$fileIndex.* | awk -F '/' '{print $NF}')" "$(echo "$arg" | sed 's/_/ /g')" "$start_line" "$end_line" "$fileName" "$link"
+    done < parsed-law-info
+}
+
+function gitCommitAndPush() {
+    gitDir=$(cd $(dirname $0) ; pwd)
+    cd $gitDir
+    git add . 
+    git commit -m "commit $$"
+    git push 
+}
+
+gitCommitAndPush
