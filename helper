@@ -32,4 +32,4 @@ sed 's/ /\n/g' |
 grep "$1" | 
 tr -d '()')
 
-$functionName
+$functionName $2
