@@ -18,8 +18,8 @@ function gitCommitAndPush() {
     gitDir=$(cd $(dirname $0) ; pwd)
     cd $gitDir
     git add . 
-    git commit -m "commit $(date +"%Y-%m-%d-%H:%M:%S")"
+    git commit -m "commit $(date +"%Y-%m-%d-%H:%M:%S") :: $1"
     git push 
 }
 
-gitCommitAndPush
+gitCommitAndPush "$1"
