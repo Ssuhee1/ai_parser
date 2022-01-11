@@ -19,8 +19,7 @@ function executeParserShell() {
 }
 
 function gitCommitAndPush() {
-    gitDir=$(cd $(dirname $0) ; pwd)
-    cd $gitDir
+    cd $cDir
     git add . 
     git commit -m "commit $(date +"%Y-%m-%d-%H:%M:%S") :: $1"
     git push 
@@ -34,5 +33,3 @@ grep "$1" |
 tr -d '()')
 
 $functionName
-
-# gitCommitAndPush "$1"
