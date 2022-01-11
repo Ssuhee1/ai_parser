@@ -12,19 +12,21 @@ This code can parse pdf and html file by specified rule
 
 
 ## Dependecies
-1) pdftotext
+1) pdf to text
 ```
     sudo apt install pdftotext -y
 ```
-2) htmltopdf (A)
+2) html to pdf (A)
 ```
     pip install pdfkit
 ```
-3) htmltopdf (B)
 ```
     sudo apt install wkhtmltopdf -y
 ```
-
+3) pdf page number
+```
+    sudo apt install pdftk -y
+```
 
 ## How to run 
 1) Put your file into uploads directory
