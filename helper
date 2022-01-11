@@ -2,6 +2,11 @@
 
 # Variables 
 cDir=$(cd $(dirname $0); pwd)
+functionName=$(cat $cDir/$(basename $0) |
+grep "^function" | 
+sed 's/ /\n/g' | 
+grep "$1" | 
+tr -d '()')
 
 # Functions 
 function executeParserShell() {
@@ -26,10 +31,4 @@ function gitCommitAndPush() {
 }
 
 # Run code 
-functionName=$(cat $cDir/$(basename $0) |
-grep "^function" | 
-sed 's/ /\n/g' | 
-grep "$1" | 
-tr -d '()')
-
 $functionName $2
