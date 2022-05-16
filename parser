@@ -15,70 +15,80 @@ echo {a..z}{a..z}{a..z} > /tmp/lineindex
 # level abc parser user 26 alphabet
 echo {a..z} > /tmp/abcindex 
 # current directory
-parser='.'
+parser='./'
 # input file stored directory
 uploads=$parser/uploads
 
 ##### Setup useful functions
 source './functions'
 
+##### Setup useful functions
+# rm -rf ./result* ./level*
+rm -rf ./result-1 ./result-2 ./result-3 ./level* ./result-line*
+
 ##### Check input file is html or pdf 
-if [ $(echo $1 | awk -F '.' '{print $NF}') == 'pdf' ] ;then 
-    # echo pdf 
-    pdftotext -layout -nopgbrk "$uploads/$1" ${tmp}_coverted_data
+# if [ $(echo $1 | awk -F '.' '{print $NF}') == 'pdf' ] ;then 
+#     # echo pdf 
+#     pdftotext -layout -nopgbrk "$uploads/$1" ${tmp}_coverted_data
 
-    pageNumber=$(pdftk "$uploads/$1" dump_data | grep NumberOfPages | awk '{print $NF}')
-    for ((pageNum=1;pageNum<=$pageNumber;pageNum++))
-    do
-        pdftotext -layout -f $pageNum -l $pageNum -nopgbrk "$uploads/$1" - |
-        awk '{if(NF!=0){print "'$pageNum'"}}' 
-    done > ${tmp}-line-number
+#     pageNumber=$(pdftk "$uploads/$1" dump_data | grep NumberOfPages | awk '{print $NF}')
+#     for ((pageNum=1;pageNum<=$pageNumber;pageNum++))
+#     do
+#         pdftotext -layout -f $pageNum -l $pageNum -nopgbrk "$uploads/$1" - |
+#         awk '{if(NF!=0){print "'$pageNum'"}}' 
+#     done > ${tmp}-line-number
 
-    # remove empty line  
-    cat ${tmp}_coverted_data | awk 'NF!=0' > ${tmp}_coverted_data_tmp
+#     # remove empty line  
+#     cat ${tmp}_coverted_data | awk 'NF!=0' > ${tmp}_coverted_data_tmp
 
-	# pdf_cleaning $tmp_coverted_data > $tmp_cleaned_data
-    while read -r line; do echo $line; done < ${tmp}_coverted_data_tmp > ${tmp}_cleaned_data 
+# 	# pdf_cleaning $tmp_coverted_data > $tmp_cleaned_data
+#     while read -r line; do echo $line; done < ${tmp}_coverted_data_tmp > ${tmp}_cleaned_data 
 
-    # Setup file body range (now manually ==> change to auto)
-    # Body first line number
-    # first_range=0
-    first_range="$3"
-    # Body end line number
-    # second_range=$(awk 'END {print NR}' < ${tmp}_cleaned_data)
-    second_range="$4"
+#     # Setup file body range (now manually ==> change to auto)
+#     # Body first line number
+#     if [[ $3 == "" ]];then 
+#         first_range=0
+#     else 
+#         first_range="$3"
+#     fi 
+#     # Body end line number
+#     if [[ $4 == "" ]];then 
+#         second_range=$(awk 'END {print NR}' < ${tmp}_cleaned_data)
+#     else 
+#         second_range="$4"
+#     fi 
 
-    # Divide body   
-    cat ${tmp}_cleaned_data | awk ''$first_range' < NR && NR < '$second_range'' > ${tmp}_cleaned_data-temp || exit 1
-    mv ${tmp}_cleaned_data-temp ${tmp}_cleaned_data
-else 
-    if [[ $(echo $1 | awk '{if($0~/^http/){print "true"}else{print "false"}}') == 'true' ]];then 
-        python3 './python/html2pdf.py' ''$1'' "${tmp}-html-to-pdf file"
-        pdftotext -layout -nopgbrk "${tmp}-html-to-pdf file" ${tmp}_coverted_data
-        cat ${tmp}_coverted_data | awk 'NF!=0' > ${tmp}_coverted_data_tmp
-        while read -r line; do echo $line; done < ${tmp}_coverted_data_tmp > ${tmp}_cleaned_data 
-        # Body first line number
-        # first_range=0
-        first_range="$3"
-        # Body end line number 
-        # second_range=$(awk 'END {print NR}' < ${tmp}_cleaned_data)
-        second_range="$4"
+#     # Divide body   
+#     cat ${tmp}_cleaned_data | awk ''$first_range' < NR && NR < '$second_range'' > ${tmp}_cleaned_data-temp || exit 1
+#     mv ${tmp}_cleaned_data-temp ${tmp}_cleaned_data
+# else 
+#     if [[ $(echo $1 | awk '{if($0~/^http/){print "true"}else{print "false"}}') == 'true' ]];then 
+#         python3 './python/html2pdf.py' ''$1'' "${tmp}-html-to-pdf file"
+#         pdftotext -layout -nopgbrk "${tmp}-html-to-pdf file" ${tmp}_coverted_data
+#         cat ${tmp}_coverted_data | awk 'NF!=0' > ${tmp}_coverted_data_tmp
+#         while read -r line; do echo $line; done < ${tmp}_coverted_data_tmp > ${tmp}_cleaned_data 
+#         # Body first line number
+#         # first_range=0
+#         first_range="$3"
+#         # Body end line number 
+#         # second_range=$(awk 'END {print NR}' < ${tmp}_cleaned_data)
+#         second_range="$4"
 
-        # Divide body   
-        cat ${tmp}_cleaned_data | awk ''$first_range' < NR && NR < '$second_range'' > ${tmp}_cleaned_data-temp || exit 1
-        cat ${tmp}-line-number | awk ''$first_range' < NR && NR < '$second_range'' > ${tmp}-line-number-temp || exit 1
-        mv ${tmp}_cleaned_data-temp ${tmp}_cleaned_data
-        mv ${tmp}-line-number-temp ${tmp}-line-number
-    fi 
-fi
+#         # Divide body   
+#         cat ${tmp}_cleaned_data | awk ''$first_range' < NR && NR < '$second_range'' > ${tmp}_cleaned_data-temp || exit 1
+#         cat ${tmp}-line-number | awk ''$first_range' < NR && NR < '$second_range'' > ${tmp}-line-number-temp || exit 1
+#         mv ${tmp}_cleaned_data-temp ${tmp}_cleaned_data
+#         mv ${tmp}-line-number-temp ${tmp}-line-number
+#     fi 
+# fi
 
-##### Make directory, store text file 
-# make directory
-mkdir $parser/result-0
-mkdir $parser/result-line-0
-# Copy cleaned data to tmp directory 
-cp ${tmp}_cleaned_data $parser/result-0
-cat ${tmp}-line-number > $parser/result-line-0/tmp_file_$$_cleaned_data
+# ##### Make directory, store text file 
+# # make directory
+# mkdir $parser/result-0
+# mkdir $parser/result-line-0
+# # Copy cleaned data to tmp directory 
+# cp ${tmp}_cleaned_data $parser/result-0
+# cat ${tmp}-line-number > $parser/result-line-0/tmp_file_$$_cleaned_data
 
 ##### Loop by parsing level 
 # Setup level count 
@@ -101,16 +111,28 @@ do
             # Create directory for store this level result
             createDirectory "$count" "$file"
             # Search part
+            # cat $file | 
+            # grep -n ''$(seach_word_abc $(echo $word | sed 's/@/ /g'))'' | 
+            # sed 's/ /_/g' | 
+            # awk -F ':' '{print $2,$1,$1-1}' > ${tmp}-search-result-v1
+
             cat $file | 
-            grep -n ''$(seach_word_abc $(echo $word | sed 's/@/ /g'))'' | 
+            grep -n '^'$(echo $word | awk -F "@" '{print $1}')' ' |
+            awk '{print $1,$2}' | 
             sed 's/ /_/g' | 
             awk -F ':' '{print $2,$1,$1-1}' > ${tmp}-search-result-v1
-            # Check first level or not
-            setupFilenameIndex "$count" "${tmp}-search-result-v1" > ${tmp}-search-result-v2
-            # Prepare search result
-            prepareSearchResult "${tmp}-search-result-v2" "$file" > ${tmp}-search-result-v3
-            # Divide file by search result
-            divideFile "${tmp}-search-result-v3"
+
+            if [[ -s ${tmp}-search-result-v1 ]];then 
+                # Check first level or not
+                setupFilenameIndex "$count" "${tmp}-search-result-v1" > ${tmp}-search-result-v2
+                # Prepare search result
+                prepareSearchResult "${tmp}-search-result-v2" "$file" > ${tmp}-search-result-v3
+                # Divide file by search result
+                divideFile "${tmp}-search-result-v3"
+            else 
+                directlyExport
+            fi 
+
         done
     elif [ $levelType == 'abc' ];then 
         # Loop by all files
@@ -149,7 +171,7 @@ do
                         divideFile "${tmp}-search-result-v3"
                     else 
                         # Directly copy result file
-                        cat $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/"@@@" 
+                        directlyExport 
                     fi 
                     rm -rf ${tmp}-search-result-v1-collect
                     break 
@@ -218,8 +240,26 @@ do
                 # Search part 
                 # setup search word
                 search_number=$(echo $word | awk -F '@' '{print $1}' | sed 's/1/'$sed_number'/g')
+                search_numberWithAbc=$(echo $word | awk -F '@' '{print $1}' | sed 's/1/'$sed_number'[A-Z]/g')
                 # search word
-                cat $file | grep -n '^'$search_number' \| '$search_number' ' > ${tmp}-search-result-v1
+                
+                # Zarim huuli deer neg hailtaar olon ur dun gargah, zarim hailtaar hamgiin ehnii ur dung awah shaardlaga garj baina.
+                # Tuhai tuhai ued ni zasaad parsee hiij baina << Bilguunee ah 
+
+                # == > 1s olon ur dun garj boloh tohioldol ===> 1. 2. 3. 3A. [3B.
+                # cat $file | grep -n '^'$search_number' \| '$search_number' \|'.$search_number' \|^'$search_numberWithAbc' \| '$search_numberWithAbc' \|'.$search_numberWithAbc' ' > ${tmp}-search-result-v1
+
+                # == > 1 l ur dun bh estoi ued ===> 1. 2. 3. 4. 5.
+                # cat $file | grep -n '^'$search_number' \| '$search_number' \|^'$search_numberWithAbc' \| '$search_numberWithAbc' ' | head -n 1 > ${tmp}-search-result-v1
+
+
+                # ===> zaawal ehend l bh estoi gsn shaardlaga baina
+                # cat $file | grep -n '^'$search_number' ' | head -n 1 > ${tmp}-search-result-v1
+
+                # 
+                cat $file | grep -n '^'$search_number' \| '$search_number' \|^'$search_numberWithAbc' \| '$search_numberWithAbc' '  > ${tmp}-search-result-v1
+
+
                 # Setup loop stop case variable 
                 result=$(cat ${tmp}-search-result-v1 | awk 'END{print NR}')
                 # Check loop stop
@@ -236,12 +276,70 @@ do
                     break
                 else 
                     # Collect search result
-                    cat ${tmp}-search-result-v1 | awk '{print $0,":'$sed_number'"}' >> ${tmp}-search-result-v1-collect 
+                    if [ $result == 1 ];then 
+                        cat ${tmp}-search-result-v1 | awk '{print $0,":'$sed_number'"}' >> ${tmp}-search-result-v1-collect 
+                    else
+                        cat ${tmp}-search-result-v1 | awk '{print $1}' | awk -F ":" '{print ":"$2}' > ${tmp}-search-result-v1-collect-filename
+                        combine2file ${tmp}-search-result-v1 ${tmp}-search-result-v1-collect-filename >> ${tmp}-search-result-v1-collect
+                    fi 
                 fi 
                 # increase range number
                 sed_number=$(($sed_number + 1))
             done 
         done 
+    elif [ $levelType == 'abcRange' ];then 
+        sed_number=1
+        for file in $(echo $files)
+        do
+            # Create directory for store this level result
+            createDirectory "$count" "$file"
+            # Search roman number from file and 
+            #   if result is founded search next roman number 
+            #   or result is not founded stop searching
+
+            echo $file
+
+            while true 
+            do
+                # Search part 
+                # setup search word
+                search_num=$(awk '{print $'$sed_number'}' /tmp/abcindex | tr '[:lower:]' '[:upper:]')
+                search_abc=$(echo $word | awk -F '@' '{print $1}' | sed 's/A/'$search_num'/g')
+
+                # search word
+                cat $file | grep -n '^'$search_abc' ' | head -n 1 > ${tmp}-search-result-v1
+
+                echo search result 
+                cat ${tmp}-search-result-v1
+                
+                # Setup loop stop case variable 
+                result=$(cat ${tmp}-search-result-v1 | awk 'END{print NR}')
+                # Check loop stop
+                if [ $result == 0 ];then
+                    echo result is 0 
+                    if [[ -s ${tmp}-search-result-v1-collect  ]];then 
+                        cat ${tmp}-search-result-v1-collect | awk -F ':' '{print $NF,$1,$1-1}' > ${tmp}-search-result-v2
+                        # Check first level or not
+                        setupFilenameIndex "$count" "${tmp}-search-result-v2" > ${tmp}-search-result-v3
+                        # Prepare search result
+                        prepareSearchResult "${tmp}-search-result-v3" "$file" > ${tmp}-search-result-v4 
+                        # Divide file by search result
+                        divideFile "${tmp}-search-result-v4"
+                        # Remove first search result 
+                        rm -rf ${tmp}-search-result-v1-collect 
+                    else 
+                        directlyExport
+                    fi 
+
+                    break
+                else 
+                    cat ${tmp}-search-result-v1 | awk '{print $0,":'$search_abc'"}' >> ${tmp}-search-result-v1-collect 
+                fi 
+                # increase range number
+                sed_number=$(($sed_number + 1))
+            done 
+            echo 
+        done       
     elif [ $levelType == 'inRange' ];then 
         for file in $(echo $files)
         do
@@ -271,7 +369,7 @@ do
                         divideFile "${tmp}-search-result-v3"
                     else 
                         # Directly copy result file
-                        cat $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/"@@@" 
+                        directlyExport 
                     fi 
                     rm -rf ${tmp}-search-result-v1-collect
                     break 
@@ -309,7 +407,7 @@ do
                         divideFile "${tmp}-search-result-v3"
                     else 
                         # Directly copy result file
-                        cat $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/"@@@" 
+                        directlyExport 
                     fi 
                     rm -rf ${tmp}-search-result-v1-collect
                     break 
@@ -353,7 +451,7 @@ do
                         divideFile "${tmp}-search-result-v3"
                     else 
                         # Directly copy result file
-                        cat $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/"@@@" 
+                        directlyExport 
                     fi 
                     rm -rf ${tmp}-search-result-v1-collect
                     break 
@@ -440,7 +538,7 @@ do
                         divideFile "${tmp}-search-result-v3"
                     else 
                         # Directly copy result file
-                        cat $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/"@@@" 
+                        directlyExport 
                     fi 
                     rm -rf ${tmp}-search-result-v1-collect
                     break 

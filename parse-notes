@@ -1,0 +1,13 @@
+INDIA
+    7. ./parser 7.pdf "CHAPTER@start@ug 1\.@389\.@start@range" "879" "6521" "Rules_of_Procedure_and_Conduct_of_Business_in_Lok" "http://164.100.47.194/loksabha/rules/RULES-2010-P-FINAL_1.pdf "
+    11. ./parser 11.pdf "1\.@12\.@start@range" "121" "1126" "RBI_Master_Circular_on_Branch_Authorisation_(Adopt" "https://www.rbi.org.in/scripts/BS_ViewMasCirculardetails.aspx?id=9014"
+    12. ==> html file <==
+    13. ==> text file <==
+        ./parser "AAA.pdf" "1\.@4\.@start@range (A)@start@abcRange" "" "" "Guidelines_for_Licensing_of_New_Banks_in_the_Priva" "https://www.rbi.org.in/scripts/bs_viewcontent.aspx?Id=2651" 
+    14. Body + Schedule
+        Body :
+            ./parser 14.pdf "CHAPTER@start@ug 1\.@470\.@start@range (1)@start@sub" 589 10776 "Companies_Act_2013_(Act_No._18_of_2013,_came_into" "https://www.mca.gov.in/Ministry/pdf/CompaniesAct2013.pdf"
+        Schedule : ==> schedule ni heregtei esehiig asuuh heregtei <==
+            ./parser 14.pdf "SCHEDULE@start@ug" "10776" "" "test" "link"
+    15. ./parser 15.pdf "I\.@start@onlyRoman 1@101@start@range" "" "1532" "Details_of_Visa_granted_by_India_(Ministry_of_home" "https://www.mha.gov.in/sites/default/files/AnnexIIIDetailsofVisas20082020.pdf"
+    16. 

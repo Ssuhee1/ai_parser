@@ -255,7 +255,6 @@ function divideFile() {
         range_1=$(echo $divide_i | awk '{print $2}')
         range_2=$(echo $divide_i | awk '{print $3}')
         # Divide input file by search result file and write to new file
-        echo divideFile : $file | sed 's/result/result-line/g'
         sed -n "$range_1,${range_2}p" $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/$file_name 
         sed -n "$range_1,${range_2}p" "$(echo $file | sed 's/result/result-line/g')" > $parser/result-line-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/$file_name 
     done < $1
@@ -277,6 +276,10 @@ function exportCsvFile() {
     for csv_row in $(find $(echo $parser/result-[0-9]* | sed 's/ /\n/g' | tail -1) -type f | sort); 
     do 
         # Ene hesgiig ahiad jaahan saijruulah heregtei
-        echo '"'$(echo $fileName)'",'$(echo $csv_row | awk -F '/' '{$1="";$2="";print $0}' | awk -F '<sep_index>' '{print $2}' | sed 's/ /\",\"/g' | sed 's/^/\"/g' | sed 's/$/\"/g')','$(echo $empty_col | sed 's/ /\",\"/g' | sed 's/^/\"/g' | sed 's/$/\"/g')',"'$(echo $link)'","'$(head -1 $(echo $csv_row | sed 's/result/result-line/g'))'","'$(cat $csv_row)'"';
+        echo '"'$(echo $fileName)'",'$(echo $csv_row | awk -F '/' '{$1="";$2="";print $0}' | awk -F '<sep_index>' '{print $2}' | sed 's/ /\",\"/g' | sed 's/^/\"/g' | sed 's/$/\"/g')','$(echo $empty_col | sed 's/ /\",\"/g' | sed 's/^/\"/g' | sed 's/$/\"/g')',"'$(echo $link)'","'$(head -1 $(echo $csv_row | sed 's/result/result-line/g'))'","'$(cat $csv_row | sed 's/,/、/g' | sed 's/"/”/g')'"';
     done >> $parser/${fileName}
+}
+
+function directlyExport() {
+    cat $file > $parser/result-$(($count + 1))/$(echo $file | awk -F "/" '{$1=""; $2=""; $3="";print $0}' | xargs echo | sed 's/ /\//g')/"@@@" 
 }
